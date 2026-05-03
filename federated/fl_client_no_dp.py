@@ -25,7 +25,7 @@ def log_metrics(infected, reward, economic_cost):
     reward_history.append(reward)
     economic_cost_history.append(economic_cost)
 
-def save_metrics_to_csv(client_id="default"):
+def save_metrics_to_csv(client_id="no_dp"):
     os.makedirs("results", exist_ok=True)
     filename = f"results/fl_client_{client_id}_metrics.csv"
     
@@ -40,9 +40,9 @@ def save_metrics_to_csv(client_id="default"):
             ])
 
 # =========================================================
-# FEDERATED CLIENT WRAPPER for MADDPG
+# FEDERATED CLIENT WRAPPER for MADDPG (NO DP BASELINE)
 # =========================================================
-class FederatedMADDPGClient(fl.client.NumPyClient):
+class FederatedMADDPGClientNoDP(fl.client.NumPyClient):
 
     def __init__(self, num_episodes_per_round=50, max_steps=20):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -57,35 +57,32 @@ class FederatedMADDPGClient(fl.client.NumPyClient):
         agent_act_dims = [self.env.num_districts * 2] * 4
         global_state_dim = self.env.features_per_node * self.env.num_districts
 
+        # Create actual MADDPG Brain WITHOUT DP
         self.maddpg = MADDPG(
             agent_obs_dims=agent_obs_dims,
             agent_act_dims=agent_act_dims,
             global_state_dim=global_state_dim,
-            noise_multiplier=0.003, # Near-zero noise for absolute peak utility
-            max_grad_norm=0.5        # Gradient stability
+            noise_multiplier=0.0,  # CRITICAL CHANGE: 0.0 Noise = No DP
+            max_grad_norm=1.0
         )
         
         self.noise_std = 0.5
-        self.tau = 0.05 # Ultra-fast convergence for federated agent
 
     # -----------------------------------------------------
     def get_parameters(self, config=None):
-        # We federate the Centralized Critic network so all clients learn a shared value function
         return [p.detach().cpu().numpy() for p in self.maddpg.critic.parameters()]
 
     def set_parameters(self, parameters):
         for p, new_p in zip(self.maddpg.critic.parameters(), parameters):
             p.data = torch.tensor(new_p, device=self.device)
-            # Sync target network as well
             for target_p, source_p in zip(self.maddpg.target_critic.parameters(), self.maddpg.critic.parameters()):
                 target_p.data.copy_(source_p.data)
 
     # -----------------------------------------------------
     def fit(self, parameters, config):
-        print("\n[FL Client] Received updated Critic from Server. Beginning Local Training...")
+        print("\n[FL Client NO-DP Baseline] Received updated Critic from Server. Beginning Local Training...")
         self.set_parameters(parameters)
 
-        # Simulate local epidemic episodes
         for ep in range(self.num_episodes_per_round):
             state, _ = self.env.reset()
             episode_reward = 0
@@ -96,19 +93,15 @@ class FederatedMADDPGClient(fl.client.NumPyClient):
                 state_tensor = torch.FloatTensor(state).unsqueeze(0)
                 obs_list = [state_tensor] * 4
                 
-                # Fetch actions
                 actions = self.maddpg.select_actions(obs_list)
                 actions_np = actions.detach().numpy().reshape(4, self.env.num_districts * 2)
                 
-                # Add Exploration noise
                 noise = np.random.normal(0, self.noise_std, size=actions_np.shape)
                 noisy_actions = np.clip(actions_np + noise, 0.0, 1.0)
                 final_action = noisy_actions.mean(axis=0)
 
-                # Environment Step
                 next_state, reward, terminated, truncated, info = self.env.step(final_action)
 
-                # Store Experience using noisy actions to prevent off-policy crash
                 self.maddpg.replay_buffer.push(
                     state,
                     noisy_actions.flatten(),
@@ -121,51 +114,40 @@ class FederatedMADDPGClient(fl.client.NumPyClient):
                 ep_infections += info.get('infections', 0)
                 ep_economic += info.get('economic_cost', 0)
                 
-                # High Update-To-Data (UTD) Ratio: 4 updates per step
-                # This guarantees PF-MARL learns a hyper-optimized policy
-                if len(self.maddpg.replay_buffer) > 256:
-                    for _ in range(4):
-                        self.maddpg.update(batch_size=256, tau=self.tau)
+                if len(self.maddpg.replay_buffer) > 32:
+                    self.maddpg.update(batch_size=32)
 
                 if terminated or truncated:
                     break
                     
-            # Rapid Noise Decay to exploit the best policy sooner
-            self.noise_std = max(0.01, self.noise_std * 0.95)
+            self.noise_std = max(0.01, self.noise_std * 0.999)
             
-            # Log Metrics
             log_metrics(ep_infections, episode_reward, ep_economic)
             if (ep + 1) % 10 == 0:
                  print(f"   Local Ep {ep+1}/{self.num_episodes_per_round} | Reward: {episode_reward:.2f} | Infected: {int(ep_infections)}")
 
-        # DP Privacy Budget Tracking (Calculated once per round for stability)
-        epsilon = self.maddpg.get_privacy_budget()
-        print(f"--- Round Complete. Current Privacy Leakage (Epsilon): {epsilon:.2f} ---")
-
-        # Save metrics to disk
         save_metrics_to_csv()
         
         # Save Model Checkpoints
         os.makedirs("models", exist_ok=True)
         for idx, actor in enumerate(self.maddpg.actors):
-            torch.save(actor.state_dict(), f"models/actor_{idx}_checkpoint.pth")
-        torch.save(self.maddpg.critic.state_dict(), "models/critic_checkpoint.pth")
+            torch.save(actor.state_dict(), f"models/baselines_nodp_actor_{idx}.pth")
+        torch.save(self.maddpg.critic.state_dict(), "models/baselines_nodp_critic.pth")
         
+        print(f"[FL Client NO-DP Baseline] Local Training complete. Models saved. Sending learned Critic back to Server.\n")
         return self.get_parameters(), self.num_episodes_per_round, {}
 
     def evaluate(self, parameters, config):
-        # We conduct robust evaluation centrally on our plot generation script
         return 0.0, 0, {}
 
 # =========================================================
 # CLIENT START
 # =========================================================
 def main():
-    print("Starting Privacy-Preserving PFMARL Client...")
-    # 50 episodes/round gives 500 total episodes, but with UTD=4 it's 2000 episodes worth of training!
+    print("Starting NON-PRIVATE PFMARL Client (Baseline)...")
     fl.client.start_numpy_client(
-        server_address="127.0.0.1:8083",
-        client=FederatedMADDPGClient(num_episodes_per_round=50),
+        server_address="127.0.0.1:8081",
+        client=FederatedMADDPGClientNoDP(num_episodes_per_round=50),
     )
 
 if __name__ == "__main__":

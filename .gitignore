@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.ipynb_checkpoints/
+*.log
+fl_client_err.txt
+benchmark_output.txt
+debug2.txt
+debug3.txt
+debug_out.txt
+temp_traceback.txt

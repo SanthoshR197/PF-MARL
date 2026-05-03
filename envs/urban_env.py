@@ -53,11 +53,13 @@ class UrbanEpidemicEnv(gym.Env):
             dtype=np.float32
         )
 
-        # Policy intensity signal per district
+        # Policy intensity signal per district:
+        # [0:num_districts] = Lockdown level
+        # [num_districts:2*num_districts] = Health Measures (Masks/Testing)
         self.action_space = spaces.Box(
             low=0.0,
             high=1.0,
-            shape=(self.num_districts,),
+            shape=(self.num_districts * 2,),
             dtype=np.float32
         )
 
@@ -167,10 +169,14 @@ class UrbanEpidemicEnv(gym.Env):
         """
         action = np.clip(action, 0.0, 1.0)
 
+        # Unpack actions
+        lockdowns = action[:self.num_districts]
+        health_measures = action[self.num_districts:]
+
         # -----------------------------
         # Policy effect on mobility (with inertia)
         # -----------------------------
-        for i, a in enumerate(action):
+        for i, a in enumerate(lockdowns):
             node = self.graph.nodes[i]
             node["base_mobility"] = np.clip(
                 0.9 * node["base_mobility"] + 0.1 * (1 - a),
@@ -182,16 +188,32 @@ class UrbanEpidemicEnv(gym.Env):
         # SEIR disease update
         # -----------------------------
         self.S, self.E, self.I, self.R = self.seir.step(
-            self.S, self.E, self.I, self.R, self.mobility_matrix
+            self.S, self.E, self.I, self.R, self.mobility_matrix, health_measures
         )
 
         self.state = self._get_observation()
 
-        # No reward yet (Section 4)
-        reward = 0.0
+        # Calculate Economic Penalty
+        # 1. Cost of restricting mobility (businesses shut down)
+        # 2. Cost of deploying health measures (buying masks, running testing centers)
+        economic_cost = 0.0
+        for i, node_data in self.graph.nodes(data=True):
+            mobility_drop = max(0, 1.0 - node_data["base_mobility"])
+            health_cost = health_measures[i] * 0.1  # Health measures are 10x cheaper than lockdown
+            economic_cost += (mobility_drop + health_cost) * node_data["economic_weight"]
+
+        # Dual-Objective Reward: minimize total infections AND economic cost
+        alpha = 2.0  # Weight for lives saved
+        beta = 0.5   # Weight for economy
+        # Exponential penalty for infections to force the AI to crush virus peaks
+        reward = - (alpha * (np.sum(self.I) ** 2.0) + beta * economic_cost)
+        
         terminated = False
         truncated = False
-        info = {}
+        info = {
+            'infections': np.sum(self.I) * 100,
+            'economic_cost': economic_cost
+        }
 
         return self.state, reward, terminated, truncated, info
 

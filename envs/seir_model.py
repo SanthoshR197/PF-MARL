@@ -38,9 +38,10 @@ class SEIRModel:
 
         return S, E, I, R
 
-    def step(self, S, E, I, R, mobility_matrix):
+    def step(self, S, E, I, R, mobility_matrix, health_measures=None):
         """
         Perform one SEIR update step.
+        health_measures: Array (0.0 to 1.0) indicating mask/testing compliance per district.
         """
         num_districts = len(S)
 
@@ -52,9 +53,14 @@ class SEIRModel:
             # Infection pressure from neighbors
             infection_pressure = np.sum(mobility_matrix[i] * I)
 
+            # Evaluate effective transmission rate
+            # High health measure (e.g. 1.0) blocks up to 80% of transmissions (masks + tests)
+            local_compliance = health_measures[i] if health_measures is not None else 0.0
+            effective_beta = self.beta * (1.0 - 0.8 * local_compliance)
+
             # S -> E
             new_E[i] = (
-                self.beta
+                effective_beta
                 * S[i]
                 * infection_pressure
                 + np.random.normal(0, self.noise_scale)

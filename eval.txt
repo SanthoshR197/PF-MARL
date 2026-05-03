@@ -1,0 +1,13 @@
+﻿--- BENCHMARK EVALUATION ---
+
+[1] Infection Control Benchmark (Target: >30% reduction vs non-cooperative/no-lockdown)
+No Lockdown Peak Infections: 20.7
+Random (Non-coop) Peak Infections: 15.1
+MADDPG Peak Infections: 19.7
+-> Reduction vs No Lockdown: 5.0%
+-> Reduction vs Random: -30.7%
+
+[2] Economic Stability Benchmark (Target: >50% higher activity vs Total Lockdown)
+Total Lockdown Economic Activity: 40.3
+MADDPG Economic Activity: 83.9
+-> Activity Increase vs Total Lockdown: 107.8%

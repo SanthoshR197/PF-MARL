@@ -1,0 +1,65 @@
+REFERENCES
+
+[1] P. Libin et al.,
+"Deep Reinforcement Learning for Large-Scale Epidemic Control,"
+arXiv preprint arXiv:2003.13676, 2020.
+
+[2] A. Q. Ohi, M. F. Mridha, M. M. Monowar, and M. A. Hamid,
+"Exploring Optimal Control of Epidemic Spread Using Reinforcement Learning,"
+Scientific Reports, vol. 10, no. 1, p. 22106, 2020.
+
+[3] S. Bushaj et al.,
+"A Simulation-Deep Reinforcement Learning (SiRL) Approach for Epidemic Control Optimization,"
+Annals of Operations Research, 2022.
+
+[4] S. N. Khatami and C. Gopalappa,
+"Deep Reinforcement Learning Framework for Controlling Infectious Disease Outbreaks in the Context of Multi-Jurisdictions,"
+medRxiv preprint, 2023.
+
+[5] X. Luo et al.,
+"H2-MARL: Multi-Agent Reinforcement Learning for Pareto Optimality in Hospital Capacity Strain and Human Mobility during Epidemic,"
+arXiv preprint arXiv:2503.10907, 2025.
+
+[6] X. Du, H. Chen, B. Yang, C. Long, and S. Zhao,
+"HRL4EC: Hierarchical Reinforcement Learning for Multi-Mode Epidemic Control,"
+Information Sciences, vol. 640, p. 119065, 2023.
+
+[7] S. Hurtado and R. Marculescu,
+"Quarantine in Motion: A Graph Learning and Multi-Agent Reinforcement Learning Framework to Reduce Disease Transmission Without Lockdown,"
+in Proc. ACM SIGKDD Conf., 2023.
+
+[8] E. Cuevas,
+"An Agent-Based Model to Evaluate the COVID-19 Transmission Risks in Facilities,"
+Computers in Biology and Medicine, vol. 121, p. 103827, 2020.
+
+[9] R. Humphries et al.,
+"A Metapopulation Network Model for the Spreading of SARS-CoV-2: Case Study for Ireland,"
+Infectious Disease Modelling, vol. 6, pp. 420-437, 2021.
+
+[10] S. A. Iyaniwura et al.,
+"Understanding the Impact of Mobility on COVID-19 Spread: A Hybrid Gravity-Metapopulation Model of COVID-19,"
+PLOS Computational Biology, vol. 19, no. 5, 2023.
+
+[11] A. Truszkowska et al.,
+"High-Resolution Agent-Based Modeling of COVID-19 Spreading in a Small Town,"
+Advances in Theory and Simulations, 2021.
+
+[12] S. Yang-Zhao and K. S. Ng,
+"Privacy Preserving Reinforcement Learning for Population Processes,"
+arXiv preprint arXiv:2406.17649, 2024.
+
+[13] Y. Zhou et al.,
+"Epidemic Decision-Making System Based Federated Reinforcement Learning,"
+arXiv preprint arXiv:2311.01749, 2023.
+
+[14] R. S. Antunes et al.,
+"Federated Learning for Healthcare: Systematic Review and Architecture Proposal,"
+in Proc. ACM, 2022.
+
+[15] B. Guan, Y. Ren, and Y. Zhang,
+"A Decentralized Federated Learning Model Based on Population Mobility Networks: A Case Study of the COVID-19 Pandemic,"
+arXiv preprint, 2025.
+
+[16] D. Froelicher et al.,
+"Scalable Privacy-Preserving Distributed Learning,"
+arXiv preprint arXiv:2005.09532, 2021.
